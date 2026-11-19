@@ -17,8 +17,6 @@ A web-based playground to interact with OpenAI's GPT image models (`gpt-image-2.
 *   **🎞️ Animated GIF Output (`gpt-image-2.6`):** Generate GIFs from a prompt or animate an uploaded image in edit mode, with 2 to 16 frames and a per-frame duration of 20 to 2000 ms. Custom frame sizes are validated against the API's sheet limits: frames are rendered tiled into one image (4×2 or 2×4 for up to 8 frames, 3×3 for 9, 4×4 for 10 or more) that must meet the still-image constraints, and the number of images × sheet pixels must stay within 16,777,216.
 *   **✒️ SVG Output (`gpt-image-2.6`, generate mode):** The image model draws a reference image and a chat model (`gpt-6.1-sol`, `gpt-6-astra`, `gpt-6.1-terra` or `gpt-6-luna`, with an optional reasoning effort) writes it as SVG. One image per request; the writer's token cost is included in the cost breakdown.
 *   **🎭 Integrated Masking & Markup Tool:** Easily create or upload masks directly within the editing mode to specify areas for modification. Draw directly on the image to generate a mask, or switch to Markup to circle or sketch where a change should go and describe it in the prompt (markup can't be combined with a mask, and masks can't be used with GIF output).
-
-     > ⚠️ Please note that the GPT Image models' masking feature does not guarantee 100% control at this time. <br>1) [It's a known & acknowledged model limitation.](https://community.openai.com/t/gpt-image-1-problems-with-mask-edits/1240639/37) <br>2) [OpenAI are looking to address it in a future update.](https://community.openai.com/t/gpt-image-1-problems-with-mask-edits/1240639/41)
 <p align="center">
   <img src="./readme-images/mask-creation.jpg" alt="Interface" width="350"/>
 </p>
@@ -84,7 +82,8 @@ Use the public application URL for `BETTER_AUTH_URL` when deployed. Volumes
 preserve sessions and generated images. `NEXT_PUBLIC_IMAGE_STORAGE_MODE` is a
 build-time setting: use `--build-arg NEXT_PUBLIC_IMAGE_STORAGE_MODE=indexeddb`
 to store images in the browser instead of the server. Container images are
-published to GHCR on default-branch and tag pushes; pull requests only build.
+published to GHCR on default-branch and tag pushes for `linux/amd64` and
+`linux/arm64`; pull requests only build. Build provenance is disabled.
 
 ### Local development
 
