@@ -2,7 +2,7 @@
 
 import type { HistoryMetadata } from '@/app/page';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
@@ -116,9 +116,9 @@ function HistoryPanelImpl({
 
     return (
         <Card className='flex h-full w-full flex-col overflow-hidden rounded-lg border border-white/10 bg-black'>
-            <CardHeader className='flex flex-row items-center justify-between gap-4 border-b border-white/10 px-4 py-3'>
+            <CardHeader className='grid grid-cols-[1fr_auto] items-start gap-x-4 gap-y-0 border-b border-white/10 pb-4'>
                 <div className='flex items-center gap-2'>
-                    <CardTitle className='text-lg font-medium text-white'>History</CardTitle>
+                    <CardTitle className='py-1 text-lg font-medium text-white'>History</CardTitle>
                     {totalCost > 0 && (
                         <Dialog open={isTotalCostDialogOpen} onOpenChange={setIsTotalCostDialogOpen}>
                             <DialogTrigger asChild>
@@ -185,6 +185,9 @@ function HistoryPanelImpl({
                         Clear
                     </Button>
                 )}
+                <CardDescription className='col-span-2 row-start-2 mt-1 text-white/60'>
+                    View and manage your generated and edited images.
+                </CardDescription>
             </CardHeader>
             <CardContent className='flex-grow overflow-y-auto p-4'>
                 {history.length === 0 ? (

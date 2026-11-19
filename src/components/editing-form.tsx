@@ -211,6 +211,7 @@ export function EditingForm({
     }, [isGif, editRegionMode, handleRegionModeChange]);
 
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
+    const brushCursorRef = React.useRef<HTMLDivElement>(null);
     const visualFeedbackCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
     const isDrawing = React.useRef(false);
     const lastPos = React.useRef<{ x: number; y: number } | null>(null);
@@ -282,7 +283,7 @@ export function EditingForm({
         feedbackCtx.fillStyle = 'red';
         editDrawnPoints.forEach((point) => {
             feedbackCtx.beginPath();
-            feedbackCtx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+            feedbackCtx.arc(point.x, point.y, point.size / 2, 0, Math.PI * 2);
             feedbackCtx.fill();
         });
 
@@ -305,6 +306,14 @@ export function EditingForm({
             x: (clientX - rect.left) * scaleX,
             y: (clientY - rect.top) * scaleY
         };
+    };
+
+    const moveBrushCursor = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const cursor = brushCursorRef.current;
+        if (!cursor) return;
+        cursor.style.left = `${e.nativeEvent.offsetX}px`;
+        cursor.style.top = `${e.nativeEvent.offsetY}px`;
+        cursor.style.display = 'block';
     };
 
     const addPoint = (x: number, y: number) => {
@@ -344,7 +353,7 @@ export function EditingForm({
 
     const drawStroke = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => {
         ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.arc(x, y, size / 2, 0, Math.PI * 2);
         ctx.fill();
     };
 
@@ -795,14 +804,31 @@ export function EditingForm({
                                         ref={canvasRef}
                                         width={editOriginalImageSize.width}
                                         height={editOriginalImageSize.height}
-                                        className='absolute top-0 left-0 h-full w-full cursor-crosshair'
+                                        className='absolute top-0 left-0 h-full w-full cursor-none'
+                                        onMouseEnter={moveBrushCursor}
                                         onMouseDown={startDrawing}
-                                        onMouseMove={drawLine}
+                                        onMouseMove={(event) => {
+                                            moveBrushCursor(event);
+                                            drawLine(event);
+                                        }}
                                         onMouseUp={stopDrawing}
-                                        onMouseLeave={stopDrawing}
+                                        onMouseLeave={() => {
+                                            if (brushCursorRef.current) brushCursorRef.current.style.display = 'none';
+                                            stopDrawing();
+                                        }}
                                         onTouchStart={startDrawing}
                                         onTouchMove={drawLine}
                                         onTouchEnd={stopDrawing}
+                                    />
+                                    <div
+                                        ref={brushCursorRef}
+                                        data-slot='brush-cursor'
+                                        aria-hidden='true'
+                                        className='pointer-events-none absolute hidden -translate-x-1/2 -translate-y-1/2 rounded-full outline outline-1 outline-white shadow-[0_0_0_2px_black]'
+                                        style={{
+                                            width: `${(editBrushSize[0] / editOriginalImageSize.width) * 100}%`,
+                                            height: `${(editBrushSize[0] / editOriginalImageSize.height) * 100}%`
+                                        }}
                                     />
                                 </div>
                                 <div className='grid grid-cols-1 gap-4 pt-2'>
