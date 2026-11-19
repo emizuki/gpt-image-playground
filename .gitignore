@@ -42,3 +42,7 @@ next-env.d.ts
 
 # generated images
 generated-images/
+
+# Better Auth database and SQLite sidecars
+/data/
+*.sqlite*

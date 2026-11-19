@@ -1,3 +1,4 @@
+import { getSession } from '@/lib/auth';
 import fs from 'fs/promises';
 import { lookup } from 'mime-types';
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,6 +8,9 @@ import path from 'path';
 const imageBaseDir = path.resolve(process.cwd(), 'generated-images');
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ filename: string }> }) {
+    if (!(await getSession(request.headers))) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { filename } = await params;
 
     if (!filename) {
@@ -31,7 +35,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             status: 200,
             headers: {
                 'Content-Type': contentType,
-                'Content-Length': fileBuffer.length.toString()
+                'Content-Length': fileBuffer.length.toString(),
+                'Cache-Control': 'private, no-store'
             }
         });
     } catch (error: unknown) {

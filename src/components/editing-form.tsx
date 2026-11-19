@@ -26,7 +26,7 @@ import {
     type ImageQuality
 } from '@/lib/models';
 import { validateSizeSelection, type SizePreset } from '@/lib/size-utils';
-import { Upload, Eraser, Save, Loader2, X, ScanEye, UploadCloud, Lock, LockOpen, HelpCircle } from 'lucide-react';
+import { Upload, Eraser, Save, Loader2, X, ScanEye, UploadCloud, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
 import * as React from 'react';
 
@@ -61,9 +61,6 @@ type EditingFormProps = {
     isLoading: boolean;
     currentMode: ImageMode;
     onModeChange: (mode: ImageMode) => void;
-    isPasswordRequiredByBackend: boolean | null;
-    clientPasswordHash: string | null;
-    onOpenPasswordDialog: () => void;
     editModel: EditingFormData['model'];
     setEditModel: React.Dispatch<React.SetStateAction<EditingFormData['model']>>;
     imageFiles: File[];
@@ -124,9 +121,6 @@ export function EditingForm({
     isLoading,
     currentMode,
     onModeChange,
-    isPasswordRequiredByBackend,
-    clientPasswordHash,
-    onOpenPasswordDialog,
     editModel,
     setEditModel,
     imageFiles,
@@ -415,42 +409,34 @@ export function EditingForm({
         }, 'image/png');
     };
 
-    const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files) {
-            const newFiles = Array.from(event.target.files);
-            const totalFiles = imageFiles.length + newFiles.length;
-
-            if (totalFiles > maxImages) {
-                alert(`You can only select up to ${maxImages} images.`);
-                const allowedNewFiles = newFiles.slice(0, maxImages - imageFiles.length);
-                if (allowedNewFiles.length === 0) {
-                    event.target.value = '';
-                    return;
-                }
-                newFiles.splice(allowedNewFiles.length);
-            }
-
-            setImageFiles((prevFiles) => [...prevFiles, ...newFiles]);
-
-            const newFilePromises = newFiles.map((file) => {
-                return new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            });
-
-            Promise.all(newFilePromises)
-                .then((newUrls) => {
-                    setSourceImagePreviewUrls((prevUrls) => [...prevUrls, ...newUrls]);
-                })
-                .catch((error) => {
-                    console.error('Error reading new image files:', error);
-                });
-
-            event.target.value = '';
+    const addImageFiles = (files: File[]) => {
+        const acceptedTypes = EDIT_INPUT_FORMATS.map(getMimeType);
+        const newFiles = files.filter((file) => acceptedTypes.includes(file.type));
+        if (newFiles.length !== files.length) {
+            alert('Please select PNG, JPEG, or WebP images.');
         }
+        if (newFiles.length + imageFiles.length > maxImages) {
+            alert(`You can only select up to ${maxImages} images.`);
+            newFiles.splice(Math.max(0, maxImages - imageFiles.length));
+        }
+        if (newFiles.length === 0) return;
+
+        setImageFiles((prevFiles) => [...prevFiles, ...newFiles]);
+        Promise.all(newFiles.map((file) => {
+            const { promise, resolve, reject } = Promise.withResolvers<string>();
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+            return promise;
+        }))
+            .then((newUrls) => setSourceImagePreviewUrls((prevUrls) => [...prevUrls, ...newUrls]))
+            .catch((error) => console.error('Error reading image files for preview:', error));
+    };
+
+    const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) addImageFiles(Array.from(event.target.files));
+        event.target.value = '';
     };
 
     const handleRemoveImage = (indexToRemove: number) => {
@@ -557,16 +543,6 @@ export function EditingForm({
                 <div>
                     <div className='flex items-center'>
                         <CardTitle className='py-1 text-lg font-medium text-white'>Edit Image</CardTitle>
-                        {isPasswordRequiredByBackend && (
-                            <Button
-                                variant='ghost'
-                                size='icon'
-                                onClick={onOpenPasswordDialog}
-                                className='ml-2 text-white/60 hover:text-white'
-                                aria-label='Configure Password'>
-                                {clientPasswordHash ? <Lock className='h-4 w-4' /> : <LockOpen className='h-4 w-4' />}
-                            </Button>
-                        )}
                     </div>
                     <CardDescription className='mt-1 text-white/60'>
                         Modify an existing image with a text prompt.
@@ -694,8 +670,13 @@ export function EditingForm({
                         <Label className='text-white'>Source Image(s) [Max: {maxImages}]</Label>
                         <Label
                             htmlFor='image-files-input'
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={(event) => {
+                                event.preventDefault();
+                                if (!isLoading && imageFiles.length < maxImages) addImageFiles(Array.from(event.dataTransfer.files));
+                            }}
                             className='flex h-10 w-full cursor-pointer items-center justify-between rounded-md border border-white/20 bg-black px-3 py-2 text-sm transition-colors hover:bg-white/5'>
-                            <span className='truncate pr-2 text-white/60'>{displayFileNames(imageFiles)}</span>
+                            <span className='truncate pr-2 text-white/60'>{imageFiles.length ? displayFileNames(imageFiles) : 'Drop images here or browse'}</span>
                             <span className='flex shrink-0 items-center gap-1.5 rounded-md bg-white/10 px-3 py-1 text-xs font-medium text-white/80 hover:bg-white/20'>
                                 <Upload className='h-3 w-3' /> Browse...
                             </span>

@@ -47,119 +47,56 @@ A web-based playground to interact with OpenAI's GPT image models (`gpt-image-2.
     *   **IndexedDB:** Images saved directly in the browser's IndexedDB (ideal for serverless deployments).
     *   Generation history metadata is always saved in the browser's local storage.
 
-## ▲ Deploy to Vercel
+## Authentication and deployment
 
-🚨 *CAUTION: If you deploy from `main` or `master` branch, your Vercel deployment will be **publicly available** to anyone who has the URL. Deploying from other branches will require users to be logged into Vercel (on your team) to access the preview build.* 🚨
+Sign-in uses Better Auth and an OpenID Connect provider. Configure your provider's
+authorization-code flow with PKCE, scopes `openid`, `profile`, and `email`, and
+the callback URL `<BETTER_AUTH_URL>/api/auth/callback/oidc`. For Cognito, use the
+User Pool issuer URL, not the hosted login domain.
 
-You can deploy your own instance of this playground to Vercel with one click:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/alasano/gpt-image-1-playground&env=OPENAI_API_KEY,NEXT_PUBLIC_IMAGE_STORAGE_MODE,APP_PASSWORD&envDescription=OpenAI%20API%20Key%20is%20required.%20Set%20storage%20mode%20to%20indexeddb%20for%20Vercel%20deployments.&project-name=gpt-image-playground&repository-name=gpt-image-playground)
-
-You will be prompted to enter your `OPENAI_API_KEY` and `APP_PASSWORD` during the deployment setup. For Vercel deployments, it's required to set `NEXT_PUBLIC_IMAGE_STORAGE_MODE` to `indexeddb`. 
-
-Note: If `NEXT_PUBLIC_IMAGE_STORAGE_MODE` is not set, the application will automatically detect if it's running on Vercel (using the `VERCEL` or `NEXT_PUBLIC_VERCEL_ENV` environment variables) and default to `indexeddb` mode in that case. Otherwise (e.g., running locally), it defaults to `fs` mode. You can always explicitly set the variable to `fs` or `indexeddb` to override this automatic behavior.
-
-## 🚀 Getting Started [Local Deployment]
-
-Follow these steps to get the playground running locally.
-
-### Prerequisites
-
-*   [Node.js](https://nodejs.org/) (Version 22 or later required)
-*   [npm](https://www.npmjs.com/), [yarn](https://yarnpkg.com/), [pnpm](https://pnpm.io/), or [bun](https://bun.sh/)
-
-### 1. Set Up API Key 🟢
-
-You need an OpenAI API key to use this application. 
-
-⚠️ [Your OpenAI Organization needs to be verified to use GPT Image models](https://help.openai.com/en/articles/10910291-api-organization-verification)
-
-1.  If you don't have a `.env.local` file, create one.
-2.  Add your OpenAI API key to the `.env.local` file:
-
-    ```dotenv
-    OPENAI_API_KEY=your_openai_api_key_here
-    ```
-
-    **Important:** Keep your API key secret. The `.env.local` file is included in `.gitignore` by default to prevent accidental commits.
-
----
-
-#### 🟡 (Optional) IndexedDB Mode (for serverless hosts) [e.g. Vercel]
-
-For environments where the filesystem is read-only or ephemeral (like Vercel serverless functions), you can configure the application to store generated images directly in the browser's IndexedDB using Dexie.js.
-
-Set the following environment variable in your `.env.local` file or directly in your hosting provider's UI (like Vercel):
+Set these environment variables at runtime (e.g. in `.env.local`):
 
 ```dotenv
-NEXT_PUBLIC_IMAGE_STORAGE_MODE=indexeddb
+OPENAI_API_KEY=your_openai_api_key
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=replace_with_a_random_secret_of_at_least_32_characters
+OIDC_ISSUER=https://your-identity-provider.example
+OIDC_CLIENT_ID=your_client_id
+OIDC_CLIENT_SECRET=your_client_secret
 ```
 
-When this variable is set to `indexeddb`:
-*   The server API (`/api/images`) will return the image data as base64 (`b64_json`) instead of saving it to disk.
-*   The client-side application will decode the base64 data and store the image blob in IndexedDB.
-*   Images will be served directly from the browser's storage using Blob URLs.
+Optionally set `OPENAI_API_BASE_URL` for a compatible API endpoint and
+`AUTH_DB_PATH` to change the SQLite database path (default `./data/auth.sqlite`).
+Keep secrets out of version control. Restrict registration at your identity
+provider: authenticated users share the image store and the OpenAI API key.
 
-If this variable is **not set** or has any other value, the application defaults to the standard behavior of saving images to the `./generated-images` directory on the server's filesystem.
-
-**Note:** If `NEXT_PUBLIC_IMAGE_STORAGE_MODE` is not set, the application will automatically detect if it's running on Vercel (using the `VERCEL` or `NEXT_PUBLIC_VERCEL_ENV` environment variables) and default to `indexeddb` mode in that case. Otherwise (e.g., running locally), it defaults to `fs` mode. You can always explicitly set the variable to `fs` or `indexeddb` to override this automatic behavior.
-
-#### 🟡 (Optional) Use a Custom API Endpoint
-
-If you need to use an OpenAI-compatible API endpoint (e.g., a local model server or a different provider), you can specify its base URL using the `OPENAI_API_BASE_URL` environment variable in your `.env.local` file:
-
-```dotenv
-OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_API_BASE_URL=your_compatible_api_endpoint_here
-```
-
-If `OPENAI_API_BASE_URL` is not set, the application will default to the standard OpenAI API endpoint.
-
----
-
-
-#### 🟡 (Optional) Enable Password Validation
-```dotenv
-APP_PASSWORD=your_password_here
-```
-When `APP_PASSWORD` is set, the frontend will prompt you for a password to authenticate requests.
-<p align="center">
-  <img src="./readme-images/password-dialog.jpg" alt="Password Dialog" width="460"/>
-</p>
-
----
-
-### 2. Install Dependencies 🟢
-
-Navigate to the project directory in your terminal and install the necessary packages:
+### Docker
 
 ```bash
-npm install
-# or
-# yarn install
-# or
-# pnpm install
-# or
-# bun install
+docker build -t gpt-image-playground .
+docker run --env-file .env -p 3000:3000 \
+  -v gpt-image-auth:/app/data \
+  -v gpt-images:/app/generated-images \
+  gpt-image-playground
 ```
 
-### 3. Run the Development Server 🟢
+Use the public application URL for `BETTER_AUTH_URL` when deployed. Volumes
+preserve sessions and generated images. `NEXT_PUBLIC_IMAGE_STORAGE_MODE` is a
+build-time setting: use `--build-arg NEXT_PUBLIC_IMAGE_STORAGE_MODE=indexeddb`
+to store images in the browser instead of the server. Container images are
+published to GHCR on default-branch and tag pushes; pull requests only build.
 
-Start the Next.js development server:
+### Local development
+
+Requires Node.js 24 or later and npm. Set the variables above in `.env.local`, then:
 
 ```bash
+npm ci
 npm run dev
-# or
-# yarn dev
-# or
-# pnpm dev
-# or
-# bun dev
 ```
 
-### 4. Open the Playground 🟢
+Open [http://localhost:3000](http://localhost:3000).
 
-Open [http://localhost:3000](http://localhost:3000) in your web browser. You should now be able to use the GPT Image Playground!
 
 ## 🤝 Contributing
 

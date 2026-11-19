@@ -23,7 +23,7 @@ import {
     type ImageQuality
 } from '@/lib/models';
 import { validateSizeSelection, type SizePreset } from '@/lib/size-utils';
-import { HelpCircle, Loader2, Lock, LockOpen } from 'lucide-react';
+import { HelpCircle, Loader2 } from 'lucide-react';
 import * as React from 'react';
 
 export type GenerationFormData = {
@@ -45,9 +45,6 @@ type GenerationFormProps = {
     isLoading: boolean;
     currentMode: ImageMode;
     onModeChange: (mode: ImageMode) => void;
-    isPasswordRequiredByBackend: boolean | null;
-    clientPasswordHash: string | null;
-    onOpenPasswordDialog: () => void;
     model: GenerationFormData['model'];
     setModel: React.Dispatch<React.SetStateAction<GenerationFormData['model']>>;
     prompt: string;
@@ -88,9 +85,6 @@ export function GenerationForm({
     isLoading,
     currentMode,
     onModeChange,
-    isPasswordRequiredByBackend,
-    clientPasswordHash,
-    onOpenPasswordDialog,
     model,
     setModel,
     prompt,
@@ -168,16 +162,6 @@ export function GenerationForm({
                 <div>
                     <div className='flex items-center'>
                         <CardTitle className='py-1 text-lg font-medium text-white'>Generate Image</CardTitle>
-                        {isPasswordRequiredByBackend && (
-                            <Button
-                                variant='ghost'
-                                size='icon'
-                                onClick={onOpenPasswordDialog}
-                                className='ml-2 text-white/60 hover:text-white'
-                                aria-label='Configure Password'>
-                                {clientPasswordHash ? <Lock className='h-4 w-4' /> : <LockOpen className='h-4 w-4' />}
-                            </Button>
-                        )}
                     </div>
                     <CardDescription className='mt-1 text-white/60'>
                         Create a new image from a text prompt.
