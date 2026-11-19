@@ -51,6 +51,8 @@ Sign-in uses Better Auth and an OpenID Connect provider. Configure your provider
 authorization-code flow with PKCE, scopes `openid`, `profile`, and `email`, and
 the callback URL `<BETTER_AUTH_URL>/api/auth/callback/oidc`. For Cognito, use the
 User Pool issuer URL, not the hosted login domain.
+Unauthenticated visits redirect directly to the provider. The app has no sign-out
+button; sessions remain active until they expire or are revoked.
 
 Set these environment variables at runtime (e.g. in `.env.local`):
 

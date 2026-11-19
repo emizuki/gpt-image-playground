@@ -6,7 +6,6 @@ import { HistoryPanel } from '@/components/history-panel';
 import { ImageOutput } from '@/components/image-output';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { calculateApiCost, type ApiUsage, type CostDetails } from '@/lib/cost-utils';
-import { authClient } from '@/lib/auth-client';
 import { ImageDB, type ImageRecord } from '@/lib/db';
 import {
     DEFAULT_COMPLEXITY,
@@ -799,18 +798,6 @@ function HomePage({ userId }: { userId: string }) {
     return (
         <main className='flex min-h-screen flex-col items-center bg-black p-4 text-white md:p-8 lg:p-12'>
             <div className='w-full max-w-screen-2xl space-y-6'>
-                <div className='flex justify-end'>
-                    <button
-                        type='button'
-                        className='rounded border border-white/20 px-4 py-2 text-sm hover:bg-white/10'
-                        onClick={async () => {
-                            const result = await authClient.signOut();
-                            if (!result.error) window.location.assign('/login');
-                            else setError(result.error.message || 'Unable to sign out.');
-                        }}>
-                        Sign out
-                    </button>
-                </div>
                 <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
                     <div className='relative flex h-[70vh] min-h-[600px] flex-col lg:col-span-1'>
                         <div className={mode === 'generate' ? 'block h-full w-full' : 'hidden'}>

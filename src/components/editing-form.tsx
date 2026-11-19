@@ -551,7 +551,7 @@ export function EditingForm({
                 <ModeToggle currentMode={currentMode} onModeChange={onModeChange} />
             </CardHeader>
             <form onSubmit={handleSubmit} className='flex h-full flex-1 flex-col overflow-hidden'>
-                <CardContent className='flex-1 space-y-5 overflow-y-auto p-4'>
+                <CardContent className='relative flex-1 space-y-5 overflow-y-auto p-4'>
                     <div className='space-y-1.5'>
                         <Label htmlFor='edit-model-select' className='text-white'>
                             Model
