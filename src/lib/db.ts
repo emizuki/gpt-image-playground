@@ -8,8 +8,8 @@ export interface ImageRecord {
 export class ImageDB extends Dexie {
     images!: EntityTable<ImageRecord, 'filename'>;
 
-    constructor() {
-        super('ImageDB');
+    constructor(userId: string) {
+        super(`ImageDB:${userId}`);
 
         this.version(1).stores({
             images: '&filename'
@@ -18,5 +18,3 @@ export class ImageDB extends Dexie {
         this.images = this.table('images');
     }
 }
-
-export const db = new ImageDB();

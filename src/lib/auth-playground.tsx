@@ -7,7 +7,7 @@ import { ImageOutput } from '@/components/image-output';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { calculateApiCost, type ApiUsage, type CostDetails } from '@/lib/cost-utils';
 import { authClient } from '@/lib/auth-client';
-import { db, type ImageRecord } from '@/lib/db';
+import { ImageDB, type ImageRecord } from '@/lib/db';
 import {
     DEFAULT_COMPLEXITY,
     DEFAULT_GPT_IMAGE_MODEL,
@@ -109,7 +109,13 @@ function getConditionalParams(
     };
 }
 
-export default function HomePage() {
+export default function Playground({ userId }: { userId: string }) {
+    return <HomePage key={userId} userId={userId} />;
+}
+
+function HomePage({ userId }: { userId: string }) {
+    const [db] = React.useState(() => new ImageDB(userId));
+    const historyKey = `openaiImageHistory:${userId}`;
     const [mode, setMode] = React.useState<ImageMode>('generate');
     const [isLoading, setIsLoading] = React.useState(false);
     const [generationStartTime, setGenerationStartTime] = React.useState<number | null>(null);
@@ -122,9 +128,18 @@ export default function HomePage() {
     const blobUrlCacheRef = React.useRef<Map<string, string>>(new Map());
     const [skipDeleteConfirmation, setSkipDeleteConfirmation] = React.useState<boolean>(false);
     const [itemToDeleteConfirm, setItemToDeleteConfirm] = React.useState<HistoryMetadata | null>(null);
+    const mountedRef = React.useRef(false);
     const [dialogCheckboxStateSkipConfirm, setDialogCheckboxStateSkipConfirm] = React.useState<boolean>(false);
 
-    const allDbImages = useLiveQuery<ImageRecord[] | undefined>(() => db.images.toArray(), []);
+    const allDbImages = useLiveQuery<ImageRecord[] | undefined>(() => db.images.toArray(), [db]);
+
+    React.useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+            db.close({ disableAutoOpen: false });
+        };
+    }, [db]);
 
     const [editImageFiles, setEditImageFiles] = React.useState<File[]>([]);
     const [editSourceImagePreviewUrls, setEditSourceImagePreviewUrls] = React.useState<string[]>([]);
@@ -215,19 +230,19 @@ export default function HomePage() {
             if (cancelled) return;
 
             try {
-                const storedHistory = localStorage.getItem('openaiImageHistory');
+                const storedHistory = localStorage.getItem(historyKey);
                 if (storedHistory) {
                     const parsedHistory: HistoryMetadata[] = JSON.parse(storedHistory);
                     if (Array.isArray(parsedHistory)) {
                         setHistory(parsedHistory);
                     } else {
                         console.warn('Invalid history data found in localStorage.');
-                        localStorage.removeItem('openaiImageHistory');
+                        localStorage.removeItem(historyKey);
                     }
                 }
             } catch (e) {
                 console.error('Failed to load or parse history from localStorage:', e);
-                localStorage.removeItem('openaiImageHistory');
+                localStorage.removeItem(historyKey);
             }
             setIsInitialLoad(false);
         });
@@ -235,18 +250,18 @@ export default function HomePage() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [historyKey]);
 
 
     React.useEffect(() => {
         if (!isInitialLoad) {
             try {
-                localStorage.setItem('openaiImageHistory', JSON.stringify(history));
+                localStorage.setItem(historyKey, JSON.stringify(history));
             } catch (e) {
                 console.error('Failed to save history to localStorage:', e);
             }
         }
-    }, [history, isInitialLoad]);
+    }, [history, historyKey, isInitialLoad]);
 
     React.useEffect(() => {
         return () => {
@@ -367,6 +382,7 @@ export default function HomePage() {
                     const blob = new Blob([byteArray], { type: actualMimeType });
 
                     await db.images.put({ filename: img.filename, blob });
+                    if (!mountedRef.current) return null;
 
                     const blobUrl = URL.createObjectURL(blob);
                     blobUrlCacheRef.current.set(img.filename, blobUrl);
@@ -634,7 +650,7 @@ export default function HomePage() {
             setError(null);
 
             try {
-                localStorage.removeItem('openaiImageHistory');
+                localStorage.removeItem(historyKey);
 
                 if (effectiveStorageModeClient === 'indexeddb') {
                     await db.images.clear();
@@ -646,7 +662,7 @@ export default function HomePage() {
                 setError(`Failed to clear history: ${e instanceof Error ? e.message : String(e)}`);
             }
         }
-    }, []);
+    }, [db, historyKey]);
 
     const handleSendToEdit = async (filename: string) => {
         if (isSendingToEdit) return;
@@ -754,7 +770,7 @@ export default function HomePage() {
                 setItemToDeleteConfirm(null);
             }
         },
-        []
+        [db]
     );
 
     const handleRequestDeleteItem = React.useCallback(

@@ -1,14 +1,14 @@
 import { getSession } from '@/lib/auth';
+import { imageDirectory, isValidImageFilename } from '@/lib/image-storage';
 import fs from 'fs/promises';
 import { lookup } from 'mime-types';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
-// Base directory where images are stored (outside nextjs-app)
-const imageBaseDir = path.resolve(process.cwd(), 'generated-images');
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ filename: string }> }) {
-    if (!(await getSession(request.headers))) {
+    const session = await getSession(request.headers);
+    if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const { filename } = await params;
@@ -17,12 +17,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
     }
 
-    // Basic security: Prevent directory traversal
-    if (filename.includes('..') || filename.startsWith('/') || filename.startsWith('\\')) {
+    if (!isValidImageFilename(filename)) {
         return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
     }
 
-    const filepath = path.join(imageBaseDir, filename);
+    const filepath = path.join(imageDirectory(session.user.id), filename);
 
     try {
         await fs.access(filepath);

@@ -1,9 +1,9 @@
 import { getSession } from '@/lib/auth';
+import { imageDirectory, isValidImageFilename } from '@/lib/image-storage';
 import fs from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
-const outputDir = path.resolve(process.cwd(), 'generated-images');
 
 
 type DeleteRequestBody = {
@@ -17,9 +17,11 @@ type FileDeletionResult = {
 };
 
 export async function POST(request: NextRequest) {
-    if (!(await getSession(request.headers))) {
+    const session = await getSession(request.headers);
+    if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const outputDir = imageDirectory(session.user.id);
     console.log('Received POST request to /api/image-delete');
 
     let requestBody: DeleteRequestBody;
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
     const deletionResults: FileDeletionResult[] = [];
 
     for (const filename of filenames) {
-        if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        if (!isValidImageFilename(filename)) {
             console.warn(`Invalid filename for deletion: ${filename}`);
             deletionResults.push({ filename, success: false, error: 'Invalid filename format.' });
             continue;

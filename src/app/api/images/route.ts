@@ -1,4 +1,5 @@
 import { getSession } from '@/lib/auth';
+import { imageDirectory } from '@/lib/image-storage';
 import {
     DEFAULT_GPT_IMAGE_MODEL,
     IMAGE_OUTPUT_FORMATS,
@@ -36,7 +37,6 @@ type StreamingEvent = {
 };
 
 
-const outputDir = path.resolve(process.cwd(), 'generated-images');
 
 // Validate and normalize output format
 function validateOutputFormat(format: unknown): ImageOutputFormat {
@@ -95,7 +95,7 @@ function moderationSuffix(error: unknown): string {
 type EditParams = OpenAI.Images.ImageEditParams & { moderation?: ImageModeration };
 type EditParamsStreaming = OpenAI.Images.ImageEditParamsStreaming & { moderation?: ImageModeration };
 
-async function ensureOutputDirExists() {
+async function ensureOutputDirExists(outputDir: string) {
     try {
         await fs.access(outputDir);
     } catch (error: unknown) {
@@ -118,9 +118,11 @@ async function ensureOutputDirExists() {
 
 
 export async function POST(request: NextRequest) {
-    if (!(await getSession(request.headers))) {
+    const session = await getSession(request.headers);
+    if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const outputDir = imageDirectory(session.user.id);
     console.log('Received POST request to /api/images');
 
     if (!process.env.OPENAI_API_KEY) {
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
         );
 
         if (effectiveStorageMode === 'fs') {
-            await ensureOutputDirExists();
+            await ensureOutputDirExists(outputDir);
         }
 
         const formData = await request.formData();

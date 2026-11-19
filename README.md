@@ -41,9 +41,9 @@ A web-based playground to interact with OpenAI's GPT image models (`gpt-image-2.
 *   **🚀 Send to Edit:** Quickly send any generated or history image directly to the editing form.
 *   **📋 Paste to Edit:** Paste images directly from your clipboard into the Edit mode's source image area.
 *   **💾 Storage:** Supports two modes via `NEXT_PUBLIC_IMAGE_STORAGE_MODE`:
-    *   **Filesystem (default):** Images saved to `./generated-images` on the server.
-    *   **IndexedDB:** Images saved directly in the browser's IndexedDB (ideal for serverless deployments).
-    *   Generation history metadata is always saved in the browser's local storage.
+    *   **Filesystem (default):** Images are saved in per-account directories under `./generated-images` on the server.
+    *   **IndexedDB:** Images are saved in a per-account browser database (ideal for serverless deployments).
+    *   Generation history is kept separately per account in the browser's local storage. Browser storage is not protected from other users of the same browser profile.
 
 ## Authentication and deployment
 
@@ -66,7 +66,12 @@ OIDC_CLIENT_SECRET=your_client_secret
 Optionally set `OPENAI_API_BASE_URL` for a compatible API endpoint and
 `AUTH_DB_PATH` to change the SQLite database path (default `./data/auth.sqlite`).
 Keep secrets out of version control. Restrict registration at your identity
-provider: authenticated users share the image store and the OpenAI API key.
+provider: authenticated users share the OpenAI API key and its charges.
+
+Back up the authentication database together with the images: account IDs are
+needed to locate each user's files. Images and browser history from before
+per-account storage remain in place but are not automatically assigned to any
+account.
 
 ### Docker
 
